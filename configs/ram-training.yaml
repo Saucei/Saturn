@@ -1,0 +1,68 @@
+# Saturn 0.1 — RAM-Primary Training Configuration (Windows 10)
+
+# Optimized for: i7-7820HQ, 16GB RAM (primary), Quadro M1200 4GB VRAM (secondary)
+# Model resides in system RAM; GPU used only for optional compute offload
+
+model:
+  # Set after selection (e.g., "Qwen/Qwen2.5-1.5B-Instruct" or null for from-scratch)
+  base_model: null
+  strategy: "full"              # full | qlora | from_scratch
+  architecture: "mlatexture"     # MLA transformer
+  d_model: 512
+  n_layers: 8
+  n_heads: 8
+  n_kv_heads: 2
+  d_ff: 1365
+  vocab_size: 8192
+  context_len: 2048
+  mla_kv_rank: 64
+  norm_eps: 1e-5
+  dtype: "fp16"                 # FP16 for RAM efficiency; Maxwell has no BF16
+  math_only_output: true
+
+training:
+  device: "cpu"                 # Primary: CPU; GPU optional via device_map
+  use_gpu_offload: false        # Set true to offload matmul to GPU
+  batch_size: 1
+  gradient_accumulation_steps: 16
+  gradient_checkpointing: true  # Trades compute for RAM
+  learning_rate: 3e-4
+  min_lr: 3e-5
+  lr_decay: "cosine"
+  warmup_steps: 500
+  max_steps: 50000
+  weight_decay: 0.01
+  beta1: 0.9
+  beta2: 0.95
+  eps: 1e-8
+  grad_clip: 1.0
+  fp16: true
+  fp32_master: true             # Master weights in system RAM
+  optimizer_8bit: false         # Set true for bitsandbytes 8-bit Adam (saves optimizer RAM)
+  save_every: 5000
+  eval_every: 1000
+  keep_last_n: 3
+
+data:
+  sources:
+    - "arxiv_math_latex"
+    - "lean4_mathlib"
+    - "codeforces_solutions"
+    - "project_euler"
+  tokenizer: "bpe_math"
+  vocab_target: 8192
+  seq_len: 2048
+  use_mmap: true                # Memory-mapped dataset; dataset can exceed RAM
+  mmap_path: "D:\Saturn\data\tokenized\math_corpus.bin"
+  strip_natural_language: true
+  min_tokens_per_sample: 16
+  max_tokens_per_sample: 2048
+
+hardware:
+  cpu_cores: 4
+  cpu_threads: 8
+  system_ram_gb: 16
+  gpu_vram_gb: 4
+  gpu_name: "Quadro M1200"
+  cuda_capability: "5.0"
+  disk_read_mbs: 50
